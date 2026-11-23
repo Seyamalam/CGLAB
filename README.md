@@ -38,6 +38,117 @@ Identical 8-octant mirroring, but the decision value `p` starts at `1 - r`
 and asks whether the midpoint between the E and SE candidates is inside the
 circle.
 
+## Worked examples step by step
+
+### 1. DDA Line — draw from (2, 2) to (15, 8)
+
+```
+Step 1: dx = 15 - 2 = 13,   dy = 8 - 2 = 6
+Step 2: steps = max(13, 6) = 13
+Step 3: x_inc = 13 / 13 = 1.0,   y_inc = 6 / 13 ≈ 0.46
+Step 4: start at (2, 2), add the increments 13 times, round each point
+```
+
+| Step | x (float) | y (float) | Plotted pixel |
+|-----:|----------:|----------:|---------------|
+| 0 | 2.00 | 2.00 | (2, 2) |
+| 1 | 3.00 | 2.46 | (3, 2) |
+| 2 | 4.00 | 2.92 | (4, 3) |
+| 3 | 5.00 | 3.38 | (5, 3) |
+| 4 | 6.00 | 3.85 | (6, 4) |
+| 5 | 7.00 | 4.31 | (7, 4) |
+| 6 | 8.00 | 4.77 | (8, 5) |
+| 7 | 9.00 | 5.23 | (9, 5) |
+| 8 | 10.00 | 5.69 | (10, 6) |
+| 9 | 11.00 | 6.15 | (11, 6) |
+| 10 | 12.00 | 6.62 | (12, 7) |
+| 11 | 13.00 | 7.08 | (13, 7) |
+| 12 | 14.00 | 7.54 | (14, 8) |
+| 13 | 15.00 | 8.00 | (15, 8) |
+
+### 2. Bresenham Line — draw from (2, 2) to (15, 8)
+
+```
+Step 1: dx = 13, dy = 6
+Step 2: p = 2*dy - dx = 12 - 13 = -1
+Step 3: at each x, plot (x, y):
+        p < 0  -> keep y,        p = p + 2*dy          (move E)
+        p >= 0 -> y = y + 1,     p = p + 2*dy - 2*dx   (move NE)
+Step 4: stop when x passes x2
+```
+
+| Pixel plotted | p before | Decision | p after |
+|---------------|---------:|----------|--------:|
+| (2, 2) | -1 | E | 11 |
+| (3, 2) | 11 | NE | -3 |
+| (4, 3) | -3 | E | 9 |
+| (5, 3) | 9 | NE | -5 |
+| (6, 4) | -5 | E | 7 |
+| (7, 4) | 7 | NE | -7 |
+| (8, 5) | -7 | E | 5 |
+| (9, 5) | 5 | NE | -9 |
+| (10, 6) | -9 | E | 3 |
+| (11, 6) | 3 | NE | -11 |
+| (12, 7) | -11 | E | 1 |
+| (13, 7) | 1 | NE | -13 |
+| (14, 8) | -13 | E | -1 |
+| (15, 8) | -1 | done | |
+
+Notice DDA and Bresenham pick the **same pixels** — Bresenham just gets
+there with integer maths only.
+
+### 3. Bresenham Circle — centre (0, 0), radius 10
+
+```
+Step 1: start x = 0, y = r = 10
+Step 2: d = 3 - 2r = 3 - 20 = -17
+Step 3: plot (x, y) in all 8 octants, then:
+        d < 0  -> d = d + 4x + 6          (move E)
+        d >= 0 -> d = d + 4(x - y) + 10   (move SE),  y = y - 1
+        x = x + 1
+Step 4: stop when x > y  (finished one octant)
+```
+
+| (x, y) octant pixel | d before | Decision | d after |
+|--------------------:|---------:|----------|--------:|
+| (0, 10) | -17 | E | -11 |
+| (1, 10) | -11 | E | -1 |
+| (2, 10) | -1 | E | 13 |
+| (3, 10) | 13 | SE, y=9 | -5 |
+| (4, 9) | -5 | E | 17 |
+| (5, 9) | 17 | SE, y=8 | 11 |
+| (6, 8) | 11 | SE, y=7 | 13 |
+| (7, 7) | 13 | loop ends | |
+
+Each octant pixel `(x, y)` produces 8 real pixels:
+`(±x, ±y)` and `(±y, ±x)`. E.g. `(4, 9)` → `(4,9) (-4,9) (4,-9) (-4,-9)
+(9,4) (-9,4) (9,-4) (-9,-4)`.
+
+### 4. Midpoint Circle — centre (0, 0), radius 10
+
+```
+Step 1: start x = 0, y = r = 10
+Step 2: p = 1 - r = 1 - 10 = -9
+Step 3: plot (x, y) in all 8 octants, then:
+        p < 0  -> p = p + 2x + 3          (move E)
+        p >= 0 -> p = p + 2(x - y) + 5    (move SE),  y = y - 1
+        x = x + 1
+Step 4: stop when x > y
+```
+
+| (x, y) octant pixel | p before | Decision | p after |
+|--------------------:|---------:|----------|--------:|
+| (0, 10) | -9 | E | -6 |
+| (1, 10) | -6 | E | -1 |
+| (2, 10) | -1 | E | 6 |
+| (3, 10) | 6 | SE, y=9 | -3 |
+| (4, 9) | -3 | E | 8 |
+| (5, 9) | 8 | SE, y=8 | 5 |
+| (6, 8) | 5 | SE, y=7 | 6 |
+| (7, 7) | 6 | loop ends | |
+
+Same octant pixels as Bresenham's circle — the two algorithms always agree.
+
 ## Tips & tricks to memorize the code
 
 - **Every algorithm = init + loop + decision update.** Learn the skeleton,
